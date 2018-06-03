@@ -22,14 +22,13 @@ public class Search {
     *
     * NO ERROR CHECKING, EXCEPTIONS JUST PROPAGATED.
     *
-    * @param    args
-    *           args[0] key represented as a big integer value
-    *           args[1] key size
-    *           args[2] ciphertext encoded as base64 value
+    * @param args[0] key represented as a big integer value
+    * @param args[1] key size
+    * @param args[2] ciphertext encoded as base64 value
     */
     public static void main(String[] args) throws Exception {
-
-        // Extract the key, turn into an array (of right size) and
+        
+        // Extract the key, turn into an array (of right size) and 
         //   convert the base64 ciphertext into an array
         BigInteger bi = new BigInteger(args[0]);
         int keySize = Integer.parseInt(args[1]);
@@ -49,7 +48,7 @@ public class Search {
                 System.out.print("\b");
             }
             // decrypt and compare to known plaintext
-            Blowfish.setKey(key);
+            Blowfish.setKey(key);        
             plaintext = Blowfish.decryptToString(ciphertext);
             if (plaintext.equals("May good flourish; Kia hua ko te pai")) {
                 System.out.println("Plaintext found!");
@@ -57,7 +56,7 @@ public class Search {
                 System.out.println("key is (hex) " + Blowfish.toHex(key) + " " + bi);
                 System.exit(-1);
             }
-
+            
             // try the next key
             bi = bi.add(BigInteger.ONE);
             key = Blowfish.asByteArray(bi,keySize);

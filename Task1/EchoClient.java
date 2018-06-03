@@ -13,7 +13,7 @@ public class EchoClient
 {
 
 	public static void main(String[] args) throws IOException {
-		if (args.length != 2) {
+		if (args.length < 2) {
 			System.err.println("Usage: java EchoClient <IP address> <Port number>");
 			System.exit(0);
 		}
