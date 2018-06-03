@@ -15,7 +15,7 @@ public class Connection extends Thread
 	public Connection(Socket c) {
 		client = c;
 		count.getAndIncrement();
-	} 
+	}
 
 
 	/**
@@ -40,15 +40,17 @@ public class Connection extends Thread
 			String response = null;
 			while (true) {
 				String line = networkBin.readLine();
-				System.out.println("Client "+count+": "+line);
+				System.out.println("Client " + count + ": " + line);
 				if ( (line == null) || line.equals("bye")) {
 					break;
 				}
 				if (line.equals("Knock, knock")) {
 					response = "Who's there?";
-				} else if (line.equals("Canoe")) {
-					response = "Canoe who?";
-				} else if (line.equals("Canoe do my homework?")) {
+				}
+				else if (line.equals("Etch.")) {
+					response = "Etch who?";
+				}
+				else if (line.equals("Bless you, friend.")) {
 					response = "<<<<groan>>>>";
 				}
 				
