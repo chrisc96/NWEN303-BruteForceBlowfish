@@ -4,10 +4,15 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 
+/**
+ * KeyManagerConnection is a thread based implementation that handles the interactions
+ * between the Client/Server architecture that exists between the Client and KeyManager. This
+ * is all done over sockets.
+ */
 public class KeyManagerConnection extends Thread {
 
 	// Standardising REQUESTS/RESPONSES (without Regex patterns, cba)
-	// These are what clients send to this Connection or what the server can send back.
+	// These are what clients send to this Connection or what the server sends back.
 	static String REQUEST_IS_WORK_LEFT = "Work_Left?";
 
 	static String REQUEST_WORK = "Requesting Work: ";
@@ -17,9 +22,11 @@ public class KeyManagerConnection extends Thread {
 	static String REQUEST_WORK_RESP_4 = "CipherText: ";
 
 	static String KEY_FOUND = "Key Found: ";
+	static String KEY_NOT_FOUND = "Key Not Found: ";
 
-	private Socket client;
-	private KeyManager manager;
+
+	private Socket client; // Client
+	private KeyManager manager; // Server domain model
 
 	public KeyManagerConnection(Socket client, KeyManager keyManager) {
 		this.client = client;
@@ -31,9 +38,6 @@ public class KeyManagerConnection extends Thread {
 		OutputStreamWriter networkPout = null;
 
 		try {
-			/**
-			 * get the input and output streams associated with the socket.
-			 */
 			networkBin = new BufferedReader(new InputStreamReader(client.getInputStream()));
 			networkPout = new OutputStreamWriter(client.getOutputStream());
 
@@ -46,8 +50,9 @@ public class KeyManagerConnection extends Thread {
 				if (line == null) {
 					break;
 				}
-
 				System.out.println("\nA client sends: " + line);
+
+				// Client could have sent:
 				if (line.contains(REQUEST_WORK)) {
 					Integer clientChunkSize;
 					try {
@@ -61,20 +66,29 @@ public class KeyManagerConnection extends Thread {
 					}
 				}
 
+
+				// OR Client could have sent:
 				if (line.equalsIgnoreCase(REQUEST_IS_WORK_LEFT)) {
 					response = "" + (manager.tasksExist() && !manager.keyFound());
 				}
 
-				// We found the key!
-				if (line.contains(KEY_FOUND)) {
+				// OR Client could have sent:
+				if (line.equalsIgnoreCase(KEY_NOT_FOUND)) {
+					// A client didn't find the key, no point printing anything to KeyManager console...
+				}
+
+				// OR Client could have sent:
+				else if (line.contains(KEY_FOUND)) {
 					System.out.println("\nWooo we found the key!");
 					manager.closeAndFinish();
 					break;
 				}
 
+				// Send the servers response back to the client
 				networkPout.write(response + "\r\n");
 				System.out.println("Server Responds: " + response);
-				// force the send to prevent buffering
+
+				// Force the send to prevent buffering
 				networkPout.flush();
 			}
 		}

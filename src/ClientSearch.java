@@ -2,6 +2,10 @@ import javafx.util.Pair;
 
 import java.math.BigInteger;
 
+/**
+ * This class decrypts a Base64 ciphertext given an initial key
+ * and a range of keys to search through.
+ */
 public class ClientSearch {
 
 	private BigInteger bi;
@@ -18,6 +22,13 @@ public class ClientSearch {
 		key = Blowfish.asByteArray(bi, keySize);
 	}
 
+	/**
+	 * We attempt to find the decryption key with our initial key (@bi) and our range (@keyRange)
+	 * @return Pair<Boolean, Result>
+	 *     			- The boolean determines whether we found the decryption key.
+	 *     			- If we didn't find it, Boolean = false, Result = null
+	 *     			- If we did, Boolean = true, Result = obj containing (@Bi) and hex version of (@Bi) (see Result class)
+	 */
 	public Pair<Boolean, Result> attempt() {
 
 		// Pair to return to client if plaintext not found
@@ -47,6 +58,10 @@ public class ClientSearch {
 		return notFound;
 	}
 
+	/**
+	 * This class represents a result of an attempt made by the ClientSearch.attempt() method
+	 * to find a decryption key.
+	 */
 	class Result {
 
 		BigInteger key;
