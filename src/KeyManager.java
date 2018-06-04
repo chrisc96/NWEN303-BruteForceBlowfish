@@ -5,16 +5,18 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class KeyManager {
 
+
 	private AtomicLong currentKey = null;
-	private int keySize = 4; // 4 bytes at minimum as Blowfish supports 32-448 bit key sizes (4 bytes = 32 bit)
 	private String ciphertext = null;
+	private int keySize = 4; // 4 bytes at minimum as Blowfish supports 32-448 bit key sizes (4 bytes = 32 bit)
 
 	ServerSocket sock;
 
+	// How long to find the decryption key
 	long startTimer;
 	long endTimer;
+	private boolean firstConnect = true; // Used to start timer on first socket connection
 
-	private boolean firstConnect = true;
 	private boolean keyFound = false;
 
 	public KeyManager(String[] args) {
@@ -22,10 +24,15 @@ public class KeyManager {
 		acceptConnections();
 	}
 
-	public static void main (String[] args) {
-		new KeyManager(args);
-	}
-
+	/**
+	 * Validates the command line inputs passed into Client
+	 *
+	 *
+	 * @param 	args size of args should be 3
+	 * 			args[0] initialKey to start searching from
+	 * 			args[1] keySize
+	 * 			args[2] ciphertext of encrypted text
+	 */
 	private void CLIValidation(String[] args) {
 		// CLI Validation
 		if (args.length != 3) {
@@ -50,6 +57,11 @@ public class KeyManager {
 		ciphertext = args[2];
 	}
 
+	/**
+	 * We setup a socket connection for our clients to connect to.
+	 * The communication is handled in a separate thread for each client so socket
+	 * requests are not coupled with server workload of message passing
+	 */
 	private void acceptConnections() {
 		// Setup the socket to accept client connections
 		try {
@@ -96,31 +108,40 @@ public class KeyManager {
 						+ KeyManagerConnection.REQUEST_WORK_RESP_3 + keySize() +  "\t"
 						+ KeyManagerConnection.REQUEST_WORK_RESP_4 + ciphertext() + "\t";
 
+		// We need to increment our current key by the work that the client is going to be doing
 		currentKey.getAndAdd(chunkValue);
 		return response;
 	}
 
-
-	public AtomicLong currentKey() {
-		return currentKey;
-	}
-
+	/**
+	 * Given the key size in bytes, we know 8 * keySize is the number of bits of the keysize
+	 * which represents the key space. 2^keyspace is the potential number of keys that the
+	 * cipher can adopt as its key. Thus, given a current key value, and a maximum keyspace,
+	 * we can determine that if 2^keyspace - currentKey that we're looking at is > 0 then
+	 * we still have tasks left to do (where tasks are just keys that haven't been explored)
+	 *
+	 * @return boolean if there are keys still left to search
+	 */
 	public boolean tasksExist() {
 		return Math.pow(2, 8*keySize) - currentKey().get() > 0;
 	}
 
+	/**
+	 * Does the same as @tasksExist() but instead of returning a boolean
+	 * returns the actual number of keys left to search.
+	 * @return number of keys left to use to decrypt
+	 */
 	public Long tasksLeft() {
 		return Math.round(Math.pow(2, 8*keySize)) - currentKey.get();
 	}
 
-	public int keySize() {
-		return keySize;
-	}
-
-	public String ciphertext() {
-		return ciphertext;
-	}
-
+	/**
+	 * When the key has been found, a message is passed to the KeyManagerConnection
+	 * from the Client, the KeyManagerConnection then tells us to clean up and end as
+	 * we have found the key.
+	 *
+	 * This is the process of doing that.
+	 */
 	public void closeAndFinish() {
 		keyFound = true;
 		endTimer = System.currentTimeMillis();
@@ -134,7 +155,33 @@ public class KeyManager {
 		catch (IOException ignored) {}
 	}
 
+
+	/**
+	 * We use an AtomicLong for thread safety purposes so that a single client gets given assigned work
+	 * and then currentKey gets incremented by the individual amount of work that that client is expected to do.
+	 *
+	 * @return
+	 */
+	public AtomicLong currentKey() {
+		return currentKey;
+	}
+
+	// Getters are Setters
+
+	public int keySize() {
+		return keySize;
+	}
+
+	public String ciphertext() {
+		return ciphertext;
+	}
+
 	public boolean keyFound() {
 		return keyFound;
+	}
+
+	// Main
+	public static void main (String[] args) {
+		new KeyManager(args);
 	}
 }

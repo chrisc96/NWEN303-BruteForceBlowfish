@@ -67,23 +67,27 @@ public class Client {
 
 					// Do work
 					ClientSearch search = new ClientSearch(initialKey, keySize, chunkSize, cipherText);
+					// Get result
 					Pair<Boolean, ClientSearch.Result> p = search.attempt();
 
+					// We need to send the results to the key manager
+					sock = new Socket(localhost, port);
+					// Set up the necessary communication channels
+					out = new PrintWriter(sock.getOutputStream(),true);
+
+					// Open connection, send message to server telling it we've found the key.
 					if (p.getKey()) {
 						System.out.println("I found the key!");
-						// Open connection, send message to server telling it we've found the key.
-						sock = new Socket(localhost, port);
-
-						// Set up the necessary communication channels
-						out = new PrintWriter(sock.getOutputStream(),true);
-
 						// Tell server we've found the key, supply information about the key.
 						out.println(KeyManagerConnection.KEY_FOUND + p.getValue().key + ", " + p.getValue().keyInHex);
-
-						// Close connection
-						out.close();
-						sock.close();
 					}
+					else {
+						out.println(KeyManagerConnection.KEY_NOT_FOUND);
+					}
+
+					// Close connection
+					out.close();
+					sock.close();
 
 					// Work has been completed, we can safely terminate the client here
 					criticalSection = false;
@@ -93,6 +97,17 @@ public class Client {
 		}
 	}
 
+	/**
+	 * Validates the command line inputs passed into Client
+	 *
+	 * Also checks if the KeyManager socket is open. If not,
+	 * no point starting client.
+	 *
+	 * @param 	args size of args should be 3
+	 * 			args[0] hostname
+	 * 			args[1] port
+	 * 			args[2] chunksize
+	 */
 	private static void validateInput(String[] args) {
 		// CLI Validation
 		if (args.length != 3) {
@@ -114,6 +129,12 @@ public class Client {
 		}
 	}
 
+	/**
+	 * Allows the client to leave (requirement 2) but only when work is finished
+	 * Essentially when an interrupt is fired (Ctrl-C), this flags that a shutdown
+	 * of this client is requested and waits until it's safe to leave (i.e all work
+	 * has been completed)
+	 */
 	private static void addClientInterruptHook() {
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			System.out.println("Shutdown requested. Ensuring work complete before shutting down.");
@@ -133,6 +154,17 @@ public class Client {
 		}));
 	}
 
+	/**
+	 * Checks with KeyManager that there is still work left to be done.
+	 * Sends a message to the key manager and the key manager checks its
+	 * domain model to see whether there is work left or not.
+	 *
+	 * Should only be called if isKeyManagerRunning() returns true.
+	 *
+	 * @param localhost hostname of socket that KeyManager is running
+	 * @param port port of socket that KeyManager is running
+	 * @return
+	 */
 	private static boolean tasksExist(String localhost, Integer port) {
 		BufferedReader in;
 		PrintWriter out;
@@ -163,6 +195,15 @@ public class Client {
 	}
 
 
+	/**
+	 * Checks if we can make a connection to the KeyManager connection socket
+	 * Run on init to check whether the port supplied to the client in CLI
+	 * is actually a socket that is open and accepting connections
+	 *
+	 * @param hostName hostname of socket that KeyManager is running
+	 * @param port port of socket that KeyManagers is running
+	 * @return
+	 */
 	public static boolean isKeyManagerRunning(String hostName, int port) {
 		boolean isAlive;
 
